@@ -1,299 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:http/http.dart' as http;
+import 'package:noron_front/user.dart';
+import 'tools.dart';
+import 'text_tool.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
-import 'dart:convert';
-
-class DropdownString {
-  final List<String> choices;
-  int currentIndex = 0;
-  DropdownString(this.choices);
-}
-
-class CommandString {
-  final List<Object> strings;
-
-  CommandString(this.strings);
-
-  String getFirstChoice() {
-    String result = "";
-    for (var obj in strings) {
-      if (obj is String) {
-        result += obj;
-      } else if (obj is DropdownString) {
-        result += obj.choices[0];
-      } else {
-        result += obj.toString();
-      }
-    }
-    return result;
-  }
-
-  List<DropdownString> getDropDownStrings() {
-    List<DropdownString> result = [];
-    for (var string in strings) {
-      if (string is DropdownString) {
-        result.add(string);
-      }
-    }
-    return result;
-  }
-
-  TextSpan getTextSpan(Function setState) {
-    List<DropdownString> dropdownStrings = getDropDownStrings();
-    int N = dropdownStrings.length;
-
-    List<InlineSpan> children = [];
-
-    int currentDDS = 0;
-    for (var i = 0; i < strings.length; i++) {
-      final element = strings[i];
-      if (element is String) {
-        children.add(TextSpan(text: element));
-      } else if (element is DropdownString) {
-        DropdownString elementToAdd = dropdownStrings[N - 1 - currentDDS];
-        currentDDS += 1;
-        children.add(WidgetSpan(
-            child: PopupMenuButton(
-          child: Text(
-            elementToAdd.choices[elementToAdd.currentIndex],
-            style: const TextStyle(color: Colors.blue),
-          ),
-          itemBuilder: (context) {
-            var menuItems = [];
-            for (var j = 0; j < elementToAdd.choices.length; j++) {
-              menuItems.add(PopupMenuItem<int>(
-                value: j,
-                child: Text(elementToAdd.choices[j]),
-                onTap: () {
-                  setState(() {
-                    elementToAdd.currentIndex = j;
-                  });
-                },
-              ));
-            }
-            return <PopupMenuEntry<int>>[...menuItems];
-          },
-        )));
-      }
-    }
-    return TextSpan(children: children);
-  }
-}
-
-class Tool {
-  final String title;
-  final IconData icon;
-  final List<CommandString> items;
-
-  Tool(this.title, this.icon, this.items);
-}
-
-List<Tool> tools = [
-  Tool(
-    "خلاصه‌سازی",
-    Icons.summarize_outlined,
-    [
-      CommandString([
-        "متن زیر را ",
-        DropdownString([
-          "در یک جمله ",
-          "در دو جمله ",
-          "در سه جمله ",
-          "در چهار جمله ",
-          "در پنج جمله ",
-          " "
-        ]),
-        "خلاصه کن.",
-      ]),
-      CommandString([
-        "محتوای صفحه تارنمای زیر رو ",
-        DropdownString([
-          "در یک جمله ",
-          "در دو جمله ",
-          "در سه جمله ",
-          "در چهار جمله ",
-          "در پنج جمله ",
-          " "
-        ]),
-        "خلاصه کن."
-      ]),
-    ],
-  ),
-  Tool(
-    "ترجمه",
-    Icons.translate,
-    [
-      CommandString([
-        "متن زیر رو ",
-        DropdownString([
-          "به انگلیسی ",
-          "به فارسی ",
-          "به عربی ",
-        ]),
-        "ترجمه کن."
-      ]),
-      CommandString([
-        "متن زیر رو ",
-        DropdownString([
-          "به انگلیسی ",
-          "به فارسی ",
-          "به عربی ",
-        ]),
-        "ترجمه کرده، سپس ",
-        DropdownString([
-          "در یک جمله ",
-          "در دو جمله ",
-          "در سه جمله ",
-          "در چهار جمله ",
-          "در پنج جمله ",
-          " "
-        ]),
-        "خلاصه کن."
-      ]),
-    ],
-  ),
-  Tool(
-    "داستان‌سرایی",
-    Icons.edit_note,
-    [
-      CommandString([
-        "یک داستان ",
-        DropdownString([
-          "طنز ",
-          "جنایی",
-          "تخیلی ",
-          "علمی ",
-          "کوتاه ",
-          " ",
-        ]),
-        "با حداکثر ",
-        DropdownString([
-          "۱۰۰ کلمه ",
-          "۲۵۰ کلمه ",
-          "۵۰۰ کلمه ",
-          "۱۰ جمله",
-          "۲۰ جمله",
-        ]),
-        " بساز",
-      ]),
-      CommandString(["یک قصه کودکانه برای خواب بچه‌ها بگو"]),
-      CommandString([
-        "یک داستان ",
-        DropdownString([
-          "طنز ",
-          "جنایی",
-          "تخیلی ",
-          "علمی ",
-          "کوتاه ",
-          " ",
-        ]),
-        "با حداکثر ",
-        DropdownString([
-          "۱۰۰ کلمه ",
-          "۲۵۰ کلمه ",
-          "۵۰۰ کلمه ",
-          "۱۰ جمله",
-          "۲۰ جمله",
-        ]),
-        " با موضوع زیر بساز",
-      ]),
-    ],
-  ),
-  Tool(
-    "شعرگویی",
-    Icons.history_edu,
-    [
-      CommandString(["یک شعر کوتاه در مورد ربات‌ها بگو"]),
-      CommandString(["۱۰بیت شعر از اشعار حافظ انتخاب کن"]),
-    ],
-  ),
-  Tool(
-    "توضیح به زبان ساده",
-    Icons.school_outlined,
-    [
-      CommandString(["هوش مصنوعی رو به زبان ساده توضیح بده"]),
-      CommandString(["نحوه رخ دادن پدیده رعد و برق رو با جزئیات بیان کن"]),
-      CommandString(["تعریف دقیق نویز در مهندسی رو بیان کن."]),
-    ],
-  ),
-  Tool(
-    "پست نویسی",
-    Icons.post_add,
-    [
-      CommandString(["یک پست در خصوص میوه سیب برای شبکه اجتماعی توییتر بنویس"]),
-    ],
-  ),
-  Tool(
-    "ساخت کوییز",
-    Icons.quiz_outlined,
-    [
-      CommandString(["یک کوییز در خصوص موضوع زبان برنامه‌نویسی پایتون بساز"]),
-    ],
-  ),
-  Tool(
-    "حل معما",
-    Icons.check,
-    [
-      CommandString([
-        "معمای زیر رو حل کن: در یک اتاق ۱۰۰ نفره به طور متوسط چند نفر روز تولدشان با من یکسان است؟"
-      ]),
-    ],
-  ),
-  Tool(
-    "تحقیق و مقاله نویسی",
-    Icons.article_outlined,
-    [
-      CommandString([
-        "فرض کن تو یک دانش‌آموز دوره دبستان هستی. یک تحقیق در خصوص خطرناک‌ترین حیوانات دریایی بنویس"
-      ]),
-      CommandString(["یک مقاله در خصوص آینده هوش مصنوعی در زمینه آموزش بنویس"]),
-      CommandString(
-          ["یک تحقیق در خصوص مسائل حل نشده در حوزه نظریه اعداد بنویس."]),
-    ],
-  ),
-  Tool(
-    "رایانامه نویسی",
-    Icons.email_outlined,
-    [
-      CommandString([
-        "فرض کن تو یک دانشجوی دوره کارشناسی در رشته مهندسی کامپیوتر هستی. یک ایمیل برای استاد کامرانی بنویس که از او درخواست کنی مهلت تمارین را یک هفته به عقب بیاندازد. از این بهانه که این هفته آزمون دیگری داری استفاده کن."
-      ]),
-    ],
-  ),
-  Tool(
-    "عنوان نویسی",
-    Icons.title,
-    [
-      CommandString(["۵ عنوان برای متن زیر پیشنهاد کن. "]),
-    ],
-  ),
-  Tool(
-    "پیشنهاد ایده",
-    Icons.lightbulb_outline,
-    [
-      CommandString(
-          ["ایده‌های پژوهشی برای دوره دکترا در زمینه لیزرهای فوتونیک بده"]),
-      CommandString(
-          ["ایده‌های نو برای کسب درامد برای مهندس نرم‌افزار پیشنهاد بده"]),
-    ],
-  ),
-  Tool(
-    "برنامه‌ریزی",
-    Icons.checklist,
-    [
-      CommandString(["یک برنامه غذایی برای لاغر شدن در طول یکماه طراحی کن."]),
-    ],
-  ),
-  Tool(
-    "تصحیح متن",
-    Icons.spellcheck,
-    [
-      CommandString(["غلط‌های املایی متن زیر را اصلاح کن."]),
-      CommandString(["متن زیر را از لحاظ نگارشی اصلاح کن"]),
-    ],
-  ),
-];
+import 'chat.dart';
 
 void main() {
   runApp(const MyApp());
@@ -307,33 +19,78 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int _selectedIndex = 1;
+  late Future<User> futureUser;
+  int _selectedTabIndex = 1;
+
+  final nameTFController = TextEditingController();
+  final emailTFController = TextEditingController();
+  final passwordTFController = TextEditingController();
+
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static const List<Widget> _widgetOptions = <Widget>[
-    Center(
-      child: Text(
-        'خانه',
-        style: optionStyle,
-      ),
-    ),
-    ToolsListView(),
-    Center(
-      child: Text(
-        'ابزار تصویری',
-        style: optionStyle,
-      ),
-    ),
-  ];
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      _selectedTabIndex = index;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    futureUser = Future(() => User("", "", ""));
+    _loadUser();
+  }
+
+  @override
+  void dispose() {
+    nameTFController.dispose();
+    emailTFController.dispose();
+    passwordTFController.dispose();
+    super.dispose();
+  }
+
+  //Loading counter value on start
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    String userName = (prefs.getString('userName') ?? '');
+    String userEmail = (prefs.getString('userEmail') ?? '');
+    String userToken = (prefs.getString('userToken') ?? '');
+
+    futureUser = Future<User>(() => User(userEmail, userName, userToken));
+  }
+
+  //Incrementing counter after click
+  Future<void> _saveUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.setString('userName', user.name);
+      prefs.setString('userEmail', user.email);
+      prefs.setString('userToken', user.token);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> widgetOptions = <Widget>[
+      FutureBuilder(
+          future: futureUser,
+          builder: (context, snapshot) {
+            return Home(user: snapshot.data ?? User("", "", ""));
+          }),
+      FutureBuilder(
+          future: futureUser,
+          builder: (context, snapshot) {
+            return ToolsListView(user: snapshot.data ?? User("", "", ""));
+          }),
+      const Center(
+        child: Text(
+          'ابزار تصویری',
+          style: optionStyle,
+        ),
+      ),
+    ];
+
     return MaterialApp(
       theme: ThemeData(
         // Define the default brightness and colors.
@@ -355,14 +112,6 @@ class _MyAppState extends State<MyApp> {
 
         // Define the default font family.
         fontFamily: 'BYekan',
-
-        // Define the default `TextTheme`. Use this to specify the default
-        // text styling for headlines, titles, bodies of text, and more.
-        // textTheme: const TextTheme(
-        //   displayLarge: TextStyle(fontSize: 72, fontWeight: FontWeight.bold),
-        //   titleLarge: TextStyle(fontSize: 36, fontStyle: FontStyle.italic),
-        //   bodyMedium: TextStyle(fontSize: 14, fontFamily: 'Hind'),
-        // ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -379,8 +128,143 @@ class _MyAppState extends State<MyApp> {
       ],
       locale: const Locale("fa", "IR"),
       home: Scaffold(
-        appBar: AppBar(),
-        body: _widgetOptions.elementAt(_selectedIndex),
+        appBar: AppBar(
+            // title: ,
+            ),
+        body: widgetOptions.elementAt(_selectedTabIndex),
+        drawer: Drawer(
+          backgroundColor: Colors.white,
+          child: ListView(
+            // Important: Remove any padding from the ListView.
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                  decoration: const BoxDecoration(
+                    color: Color.fromRGBO(240, 240, 240, 1.0),
+                  ),
+                  child: Builder(builder: (context) {
+                    return TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                    title: const Text('ورود'),
+                                    content: SizedBox(
+                                      height: 250,
+                                      child: Column(
+                                        children: [
+                                          TextField(
+                                            autofocus: true,
+                                            keyboardType: TextInputType.name,
+                                            maxLength: 100,
+                                            minLines: 1,
+                                            maxLines: 1,
+                                            controller: nameTFController,
+                                            textDirection: TextDirection.ltr,
+                                            decoration: InputDecoration(
+                                                labelText: "نام",
+                                                filled: true,
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            5))),
+                                          ),
+                                          TextField(
+                                            keyboardType:
+                                                TextInputType.emailAddress,
+                                            maxLength: 100,
+                                            minLines: 1,
+                                            maxLines: 1,
+                                            controller: emailTFController,
+                                            textDirection: TextDirection.ltr,
+                                            decoration: InputDecoration(
+                                                labelText: "ایمیل",
+                                                filled: true,
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            5))),
+                                          ),
+                                          TextField(
+                                            keyboardType:
+                                                TextInputType.visiblePassword,
+                                            maxLength: 100,
+                                            minLines: 1,
+                                            maxLines: 1,
+                                            controller: passwordTFController,
+                                            textDirection: TextDirection.ltr,
+                                            decoration: InputDecoration(
+                                                labelText: "رمز عبور",
+                                                filled: true,
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            5))),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          try {
+                                            futureUser = login(
+                                                nameTFController.text,
+                                                emailTFController.text,
+                                                passwordTFController.text);
+                                          } catch (e) {
+                                            print("Failed signin");
+                                          }
+                                        },
+                                        child: const Text(
+                                          'تأیید',
+                                          style: TextStyle(color: Colors.green),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text(
+                                          'لغو',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                    actionsAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                  ));
+                        },
+                        child: FutureBuilder(
+                            future: futureUser,
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.email.isNotEmpty) {
+                                _saveUser(snapshot.data!);
+                                return Text(snapshot.data!.email);
+                              } else {
+                                return const Text("ورود");
+                              }
+                            }));
+                  })),
+              ListTile(
+                title: const Text('Item 1'),
+                onTap: () {
+                  // Update the state of the app.
+                  // ...
+                },
+              ),
+              ListTile(
+                title: const Text('Item 2'),
+                onTap: () {
+                  // Update the state of the app.
+                  // ...
+                },
+              ),
+            ],
+          ),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
@@ -396,7 +280,7 @@ class _MyAppState extends State<MyApp> {
               label: 'ابزار تصویری',
             ),
           ],
-          currentIndex: _selectedIndex,
+          currentIndex: _selectedTabIndex,
           onTap: _onItemTapped,
         ),
       ),
@@ -404,30 +288,158 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
+class Home extends StatefulWidget {
+  final User user;
+  const Home({super.key, required this.user});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  final tffController = TextEditingController();
+  final modalTFController = TextEditingController();
+  Chat chat = Chat([
+    ChatMessage(
+        "سلام. من یک مدل هوش مصنوعی هستم که می‌توانم خدمات متنی به شما ارائه دهم.",
+        false),
+  ]);
+
+  @override
+  void dispose() {
+    tffController.dispose();
+    modalTFController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: <Widget>[
+          ListView.builder(
+            itemCount: chat.length(),
+            itemBuilder: (context, index) {
+              return ChatBubble(
+                chatMessage: chat.messages[index],
+              );
+            },
+            padding: const EdgeInsets.only(bottom: 70.0),
+          ),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Container(
+              padding: const EdgeInsets.only(left: 10, right: 10),
+              height: 60,
+              width: double.infinity,
+              color: Colors.white,
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                          hintText: "متن خود را اینجا وارد کنید...",
+                          hintStyle: TextStyle(color: Colors.black54),
+                          border: InputBorder.none),
+                      controller: modalTFController,
+                      onSubmitted: (value) {
+                        setState(() {
+                          if (value.isNotEmpty) {
+                            chat.add(value, true);
+                            chat.add("", false);
+                            chat.last().isFetching = true;
+                            sendMessages();
+                            modalTFController.clear();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 15,
+                  ),
+                  FloatingActionButton(
+                    mini: true,
+                    onPressed: () {
+                      setState(() {
+                        if (modalTFController.text.isNotEmpty) {
+                          chat.add(modalTFController.text, true);
+                          chat.add("", false);
+                          chat.last().isFetching = true;
+                          sendMessages();
+                          modalTFController.clear();
+                        }
+                      });
+                    },
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    child: const Icon(
+                      Icons.send,
+                      color: Colors.blue,
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void sendMessages() {
+    List<Map<String, dynamic>> messages = [
+      {
+        "role": "system",
+        "content": "Assistant is a helpful language model created by OpenAI"
+      },
+    ];
+
+    for (var i = 1; i < chat.length() - 1; i++) {
+      var chatMessage = chat.messages[i];
+      if (chatMessage.isUser) {
+        messages.add({"role": "user", "content": chatMessage.message});
+      } else {
+        messages.add({"role": "assistant", "content": chatMessage.message});
+      }
+    }
+
+    fetchChatGPTCompletion(widget.user.token, messages, 0.7).then((value) {
+      setState(() {
+        chat.last().message = value.completion;
+        chat.last().isFetching = false;
+      });
+      return;
+    });
+  }
+}
+
 class ToolsListView extends StatelessWidget {
-  const ToolsListView({super.key});
+  final User user;
+  const ToolsListView({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: tools.length,
+      itemCount: textTools.length,
       itemBuilder: (context, i) {
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: ExpansionTile(
               title: Text(
-                tools[i].title,
+                textTools[i].title,
                 style: const TextStyle(
                   fontSize: 20.0,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              leading: Icon(tools[i].icon),
+              leading: Icon(textTools[i].icon),
               trailing: const Icon(Icons.arrow_drop_down_rounded),
               children: <Widget>[
                 Column(
-                  children: _buildExpandableContent(tools[i], context),
+                  children: _buildExpandableContent(textTools[i], context),
                 ),
               ],
             ),
@@ -437,7 +449,7 @@ class ToolsListView extends StatelessWidget {
     );
   }
 
-  _buildExpandableContent(Tool tool, BuildContext context) {
+  _buildExpandableContent(TextTool tool, BuildContext context) {
     List<Widget> columnContent = [];
 
     for (var item in tool.items) {
@@ -452,7 +464,13 @@ class ToolsListView extends StatelessWidget {
             ),
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => SummarizerForm(command: item),
+                builder: (context) => TextToolForm(
+                    apiKey: user.token,
+                    command: item,
+                    needsTextFormField: item.needsTextFormField,
+                    textFormFieldLabelText: item.textFormFieldLabelText,
+                    textFormFieldMinLines: item.textFormFieldMinLines,
+                    buttonText: item.buttonText),
               ));
             }),
       );
@@ -504,136 +522,5 @@ class ToolsListView extends StatelessWidget {
 //   }
 // }
 
-class SummarizerForm extends StatefulWidget {
-  final CommandString command;
-  const SummarizerForm({super.key, required this.command});
+// User
 
-  @override
-  State<SummarizerForm> createState() => _SummarizerFormState();
-}
-
-class Album {
-  final int userId;
-  final int id;
-  final String title;
-
-  const Album({required this.userId, required this.id, required this.title});
-
-  factory Album.fromJson(Map<String, dynamic> json) {
-    return Album(userId: json['userId'], id: json['id'], title: json['title']);
-  }
-}
-
-class _SummarizerFormState extends State<SummarizerForm> {
-  final tffController = TextEditingController();
-  late Future<Album> futureAlbum;
-
-  @override
-  void initState() {
-    super.initState();
-    futureAlbum = fetchAlbum();
-    tffController.addListener(_myListener);
-  }
-
-  @override
-  void dispose() {
-    tffController.dispose();
-    super.dispose();
-  }
-
-  void _myListener() {
-    // print(tffController.text);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Text.rich(
-                widget.command.getTextSpan(setState),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              TextFormField(
-                maxLength: 4000,
-                minLines: 8,
-                maxLines: null,
-                controller: tffController,
-                decoration: InputDecoration(
-                    labelText: "متن خود را اینجا وارد کنید.",
-                    filled: true,
-                    fillColor: Colors.white,
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(5))),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              ElevatedButton(
-                  onPressed: () {
-                    fetchAlbum();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.all(10.0),
-                    child: Text("خلاصه کن"),
-                  )),
-              const SizedBox(
-                height: 20,
-              ),
-              FutureBuilder(
-                future: futureAlbum,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5.0),
-                        color: Colors.black12,
-                      ),
-                      padding: const EdgeInsets.all(8.0),
-                      child: SelectableText(
-                        snapshot.data!.title,
-                        style: const TextStyle(color: Colors.black),
-                      ),
-                    );
-                  } else if (snapshot.hasError) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5.0),
-                        color: Colors.black12,
-                      ),
-                      padding: const EdgeInsets.all(8.0),
-                      child: SelectableText(
-                        '${snapshot.error!}',
-                        style: const TextStyle(color: Colors.black),
-                      ),
-                    );
-                  }
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                },
-              )
-            ],
-          ),
-        ));
-  }
-}
-
-Future<Album> fetchAlbum() async {
-  String url = 'https://jsonplaceholder.typicode.com/albums/1';
-  final response = await http.get(Uri.parse(url));
-
-  if (response.statusCode == 200) {
-    return Album.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Failed to load the album');
-  }
-}
