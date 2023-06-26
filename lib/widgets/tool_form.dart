@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
-import 'dart:convert';
 
-import 'tools.dart';
+import '../api/openai.dart';
+import '../objects/chat.dart';
+import '../objects/tools.dart';
 
 class TextToolForm extends StatefulWidget {
   final String apiKey;
@@ -27,16 +27,6 @@ class TextToolForm extends StatefulWidget {
   State<TextToolForm> createState() => _TextToolFormState();
 }
 
-class ChatGPTCompletion {
-  final String completion;
-
-  const ChatGPTCompletion({required this.completion});
-
-  factory ChatGPTCompletion.fromJson(Map<String, dynamic> json) {
-    return ChatGPTCompletion(completion: json['result']);
-  }
-}
-
 class _TextToolFormState extends State<TextToolForm> {
   final tffController = TextEditingController();
   late Future<ChatGPTCompletion> futureChatGPTCompletion;
@@ -45,7 +35,7 @@ class _TextToolFormState extends State<TextToolForm> {
   void initState() {
     super.initState();
     futureChatGPTCompletion =
-        Future(() => const ChatGPTCompletion(completion: ""));
+        Future(() => const ChatGPTCompletion(completion: "", error: ""));
   }
 
   @override
@@ -153,29 +143,5 @@ class _TextToolFormState extends State<TextToolForm> {
             ],
           ),
         ));
-  }
-}
-
-Future<ChatGPTCompletion> fetchChatGPTCompletion(
-    apiKey, messages, temperature) async {
-  print(jsonEncode(messages));
-  String url = 'http://45.90.74.46:8000/chatgptcompletion/';
-  final response = await http.post(Uri.parse(url),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-        'authorization': 'Token $apiKey'
-      },
-      body: jsonEncode(<String, String>{
-        'messages': json.encode(messages),
-        'temperature': '$temperature'
-      }));
-
-  if (response.statusCode == 200) {
-    return ChatGPTCompletion.fromJson(
-        jsonDecode(utf8.decode(response.bodyBytes)));
-  } else {
-    print(response.statusCode);
-    print(response.body);
-    throw Exception('Failed to load the chatgpt-completion');
   }
 }

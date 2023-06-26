@@ -114,7 +114,7 @@ class TextTool {
 }
 
 List<TextTool> textTools = [
-  TextTool("تشریح", Icons.school_outlined, [
+  TextTool("آموزش", Icons.school_outlined, [
     CommandString(["هوش مصنوعی رو به زبان ساده توضیح بده"], true,
         "متن خود را اینجا وارد کنید.", 8, "▶︎"),
   ]),
