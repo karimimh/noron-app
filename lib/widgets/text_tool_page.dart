@@ -26,7 +26,7 @@ class _TextToolPageState extends State<TextToolPage> {
     super.initState();
     tffController.text = widget.initialToolText;
     futureChatGPTCompletion =
-        Future(() => const ChatGPTCompletion(completion: "", error: ""));
+        Future(() => const ChatGPTCompletion(completions: []));
   }
 
   @override
@@ -70,7 +70,9 @@ class _TextToolPageState extends State<TextToolPage> {
                         {"role": "user", "content": tffController.text}
                       ];
                       futureChatGPTCompletion = fetchChatGPTCompletion(
-                          widget.noron.user.token, messages, 0.7);
+                          user: widget.noron.user,
+                          messages: messages,
+                          temperature: 0.7);
                       futureChatGPTCompletion.whenComplete(() {
                         setState(() {
                           isFetchingCompletioon = false;
@@ -90,7 +92,7 @@ class _TextToolPageState extends State<TextToolPage> {
             FutureBuilder(
               future: futureChatGPTCompletion,
               builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data!.completion.isNotEmpty) {
+                if (snapshot.hasData && snapshot.data!.firstChoice.isNotEmpty) {
                   return Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(5.0),
@@ -98,7 +100,7 @@ class _TextToolPageState extends State<TextToolPage> {
                     ),
                     padding: const EdgeInsets.all(8.0),
                     child: SelectableText(
-                      snapshot.data!.completion,
+                      snapshot.data!.firstChoice,
                       textAlign: TextAlign.justify,
                       style: const TextStyle(color: Colors.black),
                     ),

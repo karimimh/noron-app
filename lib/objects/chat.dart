@@ -23,16 +23,32 @@ class Chat {
   ChatMessage last() {
     return messages.last;
   }
+
+  Chat withHeader() {
+    Chat newChat = Chat();
+    newChat.add(chatHeaderPersian, false, true);
+    newChat.messages.addAll(messages);
+    return newChat;
+  }
 }
 
 class ChatGPTCompletion {
-  final String completion;
-  final String error;
-
-  const ChatGPTCompletion({required this.completion, required this.error});
-
-  factory ChatGPTCompletion.fromJson(Map<String, dynamic> json) {
-    return ChatGPTCompletion(
-        completion: json['result'] ?? "", error: json['error'] ?? "");
+  final List<dynamic> completions;
+  String get firstChoice {
+    return completions[0]["message"]["content"];
   }
+
+  const ChatGPTCompletion({required this.completions});
+
+  @override
+  String toString() {
+    return firstChoice;
+  }
+
+  // factory ChatGPTCompletion.fromJson(Map<String, dynamic> d) {
+  //   // print("COMPLETIONS: ${json['completions']}");
+  //   // print("FIRST CHOICE: ${json['completions'][0]["message"]["content"]}");
+  //   return ChatGPTCompletion(
+  //       completions: d.containsKey('completions') ? d['completions'] : []);
+  // }
 }

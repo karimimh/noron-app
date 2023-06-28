@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/login_page.dart';
-import '../api/user_api.dart';
+import 'package:noron_front/widgets/user/login_page.dart';
+import '../../api/user_api.dart';
 
 class ResendEmailPage extends StatefulWidget {
   final NoronAppData noron;
@@ -15,6 +15,12 @@ class _ResendEmailPageState extends State<ResendEmailPage> {
   bool isSendingEmail = false;
   final emailTFController = TextEditingController();
   String errorString = "";
+
+  @override
+  void dispose() {
+    emailTFController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +126,7 @@ class _ResendEmailPageState extends State<ResendEmailPage> {
 
 TextField _textFieldTemplate({keyboardType, controller, labelText}) {
   return TextField(
-    autofocus: true,
+    autofocus: false,
     keyboardType: keyboardType,
     maxLength: 100,
     buildCounter: (context,

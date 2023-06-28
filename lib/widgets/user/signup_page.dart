@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/login_page.dart';
-import '../api/user_api.dart';
+import 'package:noron_front/widgets/user/login_page.dart';
+import '../../api/user_api.dart';
 
 class SignUpPage extends StatefulWidget {
   final NoronAppData noron;
@@ -17,6 +17,14 @@ class _SignUpPageState extends State<SignUpPage> {
   final emailTFController = TextEditingController();
   final passwordTFController = TextEditingController();
   String errorString = "";
+
+  @override
+  void dispose() {
+    nameTFController.dispose();
+    passwordTFController.dispose();
+    emailTFController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
 TextField _textFieldTemplate({keyboardType, controller, labelText}) {
   return TextField(
-    autofocus: true,
+    autofocus: false,
     keyboardType: keyboardType,
     maxLength: 100,
     buildCounter: (context,

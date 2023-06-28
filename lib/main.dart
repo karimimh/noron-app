@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/login_page.dart';
+import 'package:noron_front/widgets/startup_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,6 +16,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   NoronAppData noron = NoronAppData();
+  bool appDataLoaded = false;
 
   @override
   void initState() {
@@ -23,6 +24,7 @@ class _MyAppState extends State<MyApp> {
     noron.load().then((value) {
       setState(() {
         noron = value;
+        appDataLoaded = true;
       });
     });
   }
@@ -66,12 +68,18 @@ class _MyAppState extends State<MyApp> {
         Locale("fa", "IR"),
       ],
       locale: const Locale("fa", "IR"),
-      home: Directionality(
-        textDirection: noron.isRTL() ? TextDirection.rtl : TextDirection.ltr,
-        child: Builder(builder: (context) {
-          return LoginPage(noron: noron);
-        }),
-      ),
+      home: Builder(builder: (context) {
+        if (appDataLoaded) {
+          return StartupPage(noron: noron);
+        } else {
+          return Container(
+            color: Colors.white,
+            child: const CircularProgressIndicator.adaptive(
+              backgroundColor: Colors.black,
+            ),
+          );
+        }
+      }),
     );
   }
 }

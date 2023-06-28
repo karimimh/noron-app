@@ -12,11 +12,17 @@ class NoronAppData {
   //Not Saved:
   List<bool> isExpanded =
       List<bool>.generate(textTools.length, (index) => true);
-  Chat get chat => user.chats.last;
 
   bool isAnActiveUserLoggedIn() {
     return user.email.isNotEmpty && user.token.isNotEmpty;
   }
+
+  int currentChatIndex = 0;
+
+  Chat get currentChat => user.chats[currentChatIndex];
+  List<ChatMessage> get currentChatMessages => currentChat.messages;
+  ChatMessage? get latestChatMessage =>
+      currentChatMessages.isEmpty ? null : currentChatMessages.last;
 
   Future<NoronAppData> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,6 +50,15 @@ class NoronAppData {
     prefs.setString('userEmail', user.email);
     prefs.setString('userToken', user.token);
     prefs.setString('appLanguage', appLanguage.toString());
+  }
+
+  Future<void> deleteData() async {
+    print("Deleting all AppData");
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove('userName');
+    prefs.remove('userEmail');
+    prefs.remove('userToken');
+    prefs.remove('appLanguage');
   }
 
   bool isRTL() {

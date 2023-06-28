@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/forgot_password.dart';
-import 'package:noron_front/widgets/signup_page.dart';
-import '../api/user_api.dart';
+import 'package:noron_front/widgets/user/forgot_password.dart';
+import 'package:noron_front/widgets/user/signup_page.dart';
+import '../../api/user_api.dart';
 
-import 'home_page.dart';
+import '../home_page.dart';
 import 'resend_email.dart';
 
 class LoginPage extends StatefulWidget {
@@ -20,6 +20,13 @@ class _LoginPageState extends State<LoginPage> {
   final emailTFController = TextEditingController();
   final passwordTFController = TextEditingController();
   String errorString = "";
+
+  @override
+  void dispose() {
+    passwordTFController.dispose();
+    emailTFController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
 
 TextField _textFieldTemplate({keyboardType, controller, labelText}) {
   return TextField(
-    autofocus: true,
+    autofocus: false,
     keyboardType: keyboardType,
     maxLength: 100,
     buildCounter: (context,

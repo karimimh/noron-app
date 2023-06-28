@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/login_page.dart';
+import 'package:noron_front/widgets/user/login_page.dart';
 
-import '../api/user_api.dart';
+import '../../api/user_api.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   final NoronAppData noron;
@@ -16,6 +16,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   bool isResettingPassword = false;
   final emailTFController = TextEditingController();
   String errorString = "";
+
+  @override
+  void dispose() {
+    emailTFController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +129,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
 TextField _textFieldTemplate({keyboardType, controller, labelText}) {
   return TextField(
-    autofocus: true,
+    autofocus: false,
     keyboardType: keyboardType,
     maxLength: 100,
     buildCounter: (context,
