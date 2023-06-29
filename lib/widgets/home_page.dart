@@ -10,18 +10,17 @@ class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.noron});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePage> createState() => HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
+class HomePageState extends State<HomePage> {
   final _scController = ScrollController();
-  bool _isShowingSideBar = false;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool isShowingSideBar = false;
 
   @override
   void initState() {
     super.initState();
-    widget.noron.currentChatIndex = widget.noron.user.chats.length - 1;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _scController.jumpTo(_scController.position.maxScrollExtent);
     });
@@ -33,7 +32,7 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onHorizontalDragEnd: (details) {
         double delta = details.velocity.pixelsPerSecond.dx;
-        if (_isShowingSideBar && delta < -10) {
+        if (isShowingSideBar && delta < -10) {
           _toggleSideBar();
         }
       },
@@ -47,6 +46,14 @@ class _HomePageState extends State<HomePage> {
                 width: screenWidth * 0.666,
                 child: SidebarPage(
                   noron: widget.noron,
+                  onChatItemTapped: (chatIndex) {
+                    _toggleSideBar(
+                      completion: () {
+                        widget.noron.currentChatIndex = chatIndex;
+                      },
+                    );
+                  },
+                  scaffoldKey: _scaffoldKey,
                 )),
             SizedBox(
               width: screenWidth,
@@ -64,8 +71,12 @@ class _HomePageState extends State<HomePage> {
                     actions: [
                       IconButton(
                           onPressed: () {
-                            widget.noron.user.chats.add(Chat());
-                            widget.noron.save();
+                            if (widget.noron.currentChat.isEmpty()) {
+                              return;
+                            }
+                            if (!widget.noron.user.chats.last.isEmpty()) {
+                              widget.noron.user.chats.add(Chat());
+                            }
                             setState(() {
                               widget.noron.currentChatIndex =
                                   widget.noron.user.chats.length - 1;
@@ -77,15 +88,15 @@ class _HomePageState extends State<HomePage> {
                   body: Stack(
                     children: [
                       Opacity(
-                        opacity: _isShowingSideBar ? 0.5 : 1.0,
+                        opacity: isShowingSideBar ? 0.5 : 1.0,
                         child: IgnorePointer(
-                            ignoring: _isShowingSideBar,
+                            ignoring: isShowingSideBar,
                             child: ChatPage(
                               noron: widget.noron,
                             )),
                       ),
                       IgnorePointer(
-                        ignoring: !_isShowingSideBar,
+                        ignoring: !isShowingSideBar,
                         child: GestureDetector(
                           onTap: () {
                             _toggleSideBar();
@@ -106,10 +117,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _toggleSideBar() {
+  void _toggleSideBar({void Function()? completion}) {
     _scController
         .animateTo(
-      _isShowingSideBar
+      isShowingSideBar
           ? _scController.position.maxScrollExtent
           : _scController.position.minScrollExtent,
       duration: const Duration(milliseconds: 200),
@@ -117,8 +128,19 @@ class _HomePageState extends State<HomePage> {
     )
         .then((value) {
       setState(() {
-        _isShowingSideBar = !_isShowingSideBar;
+        isShowingSideBar = !isShowingSideBar;
+        if (completion != null) {
+          completion();
+        }
       });
     });
   }
+
+  // void _repositionSideBar() {
+  //   if (_scController.hasClients) {
+  //     _scController.jumpTo(_isShowingSideBar
+  //         ? _scController.position.maxScrollExtent
+  //         : _scController.position.minScrollExtent);
+  //   }
+  // }
 }

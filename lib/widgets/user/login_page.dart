@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
+import 'package:noron_front/widgets/startup_page.dart';
 import 'package:noron_front/widgets/user/forgot_password.dart';
 import 'package:noron_front/widgets/user/signup_page.dart';
 import '../../api/user_api.dart';
 
-import '../home_page.dart';
 import 'resend_email.dart';
 
 class LoginPage extends StatefulWidget {
@@ -152,6 +152,8 @@ class _LoginPageState extends State<LoginPage> {
                   return Text(
                     errorString,
                     textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                     style: const TextStyle(color: Colors.red),
                   );
                 },
@@ -164,36 +166,38 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() {
+    if (emailTFController.text.isEmpty || passwordTFController.text.isEmpty) {
+      setState(() {
+        errorString = "ایمیل و رمز عبور باید وارد شود.";
+      });
+      return;
+    }
+
     setState(() {
       isLoggingIn = true;
       errorString = "";
-      // first check if the current token is working:
-      fetchMe(widget.noron.user).then((value) {
-        setState(() {
-          isLoggingIn = false;
-        });
-      }).onError((error, stackTrace) {
-        createToken(
-                email: emailTFController.text,
-                password: passwordTFController.text)
-            .then((value) {
-          widget.noron.user.token = value;
-          setState(() {
-            isLoggingIn = false;
-            // login successful. open the home page now:
-            widget.noron.save();
-            Navigator.of(context).pushReplacement(MaterialPageRoute(
-              builder: (context) {
-                return HomePage(noron: widget.noron);
-              },
-            ));
-          });
-        }).onError((error, stackTrace) {
-          setState(() {
-            isLoggingIn = false;
-            errorString = error.toString();
-          });
-        });
+    });
+
+    createToken(
+            email: emailTFController.text, password: passwordTFController.text)
+        .then((value) {
+      widget.noron.user.email = emailTFController.text;
+      widget.noron.user.token = value;
+      widget.noron.save();
+
+      setState(() {
+        isLoggingIn = false;
+        // login successful. open the home page now:
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (context) {
+            return StartupPage(noron: widget.noron);
+          },
+        ));
+      });
+    }).onError((error, stackTrace) {
+      setState(() {
+        isLoggingIn = false;
+        errorString = error.toString();
       });
     });
   }

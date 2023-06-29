@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:noron_front/util/highlighter_theme.dart';
+import 'package:noron_front/util/my_code_highlighter.dart';
+
+import 'highlighter_theme.dart';
 
 String detectLanguage({required String string}) {
-  String languageCodes = 'fa';
+  if (string.isEmpty) {
+    return 'fa';
+  }
+  String languageCodes = 'en';
   final RegExp persian = RegExp(r'^[\u0600-\u06FF]+');
   final RegExp english = RegExp(r'^[A-Za-z]+');
   if (persian.hasMatch(string)) {
@@ -11,7 +15,12 @@ String detectLanguage({required String string}) {
   } else if (english.hasMatch(string)) {
     languageCodes = 'en';
   }
+
   return languageCodes;
+}
+
+bool detectRTL({required String string}) {
+  return detectLanguage(string: string) == "fa";
 }
 
 TextSpan highlightedBackTicks(String text) {
@@ -32,7 +41,7 @@ TextSpan highlightedBackTicks(String text) {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 4,
                 ),
-                child: Text(
+                child: SelectableText(
                   parts[i],
                   textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
                 ),
@@ -43,11 +52,9 @@ TextSpan highlightedBackTicks(String text) {
   return TextSpan(children: spans);
 }
 
-SelectableText getRichText(String text, bool isUser, String language) {
+SelectableText getRichText(String text, bool isUser) {
   final textColor = isUser ? Colors.white : Colors.black;
-  // final quotedBackgoundColor =
-  // isUser ? Colors.blue[100] : const Color(0xffE7E7ED);
-  final isRTL = language == "fa";
+  final isRTL = detectRTL(string: text);
 
   RegExp regexp = RegExp(r"```([\s\S]*?)```");
   Iterable<Match> matches = regexp.allMatches(text);
@@ -68,38 +75,38 @@ SelectableText getRichText(String text, bool isUser, String language) {
 
     String delimitedText = matchString ?? "";
     children.add(WidgetSpan(
-        child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Builder(builder: (context) {
-              final codeLanguageRegexp = RegExp(r"^\w+");
-              if (codeLanguageRegexp.hasMatch(delimitedText)) {
-                String codeLanguage = delimitedText.split('\n')[0];
-                String code =
-                    delimitedText.substring(codeLanguage.length).trim();
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Builder(builder: (context) {
+                final codeLanguageRegexp = RegExp(r"^\w+");
+                final foundLanguage =
+                    codeLanguageRegexp.hasMatch(delimitedText);
+                String codeLanguage = '';
+                String code = delimitedText;
+                if (foundLanguage) {
+                  codeLanguage = delimitedText.split('\n')[0];
+                  code = code.substring(codeLanguage.length).trim();
+                }
                 return Directionality(
                   textDirection: TextDirection.ltr,
-                  child: HighlightView(
+                  child: MyHighlightView(
                     code,
                     language: codeLanguage,
                     theme: myHighlighterTheme,
                     padding: const EdgeInsets.all(8),
                   ),
                 );
-              }
-              return Text(
-                delimitedText.trim(),
-                textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-              );
-            }),
+              }),
+            ),
           ),
-        ),
-      ],
-    )));
+        ],
+      ),
+    ));
 
     currentIndex = endIndex;
   }

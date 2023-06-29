@@ -1,54 +1,85 @@
 class ChatMessage {
   String text = "";
-  var isRTL = true;
   bool isUser = true;
-  bool isFetching = false;
 
-  ChatMessage({required this.text, required this.isUser, required this.isRTL});
+  ChatMessage({required this.text, required this.isUser});
 }
 
 class Chat {
-  static const chatHeaderPersian =
-      "سلام. من یک مدل هوش مصنوعی هستم که می‌توانم خدمات متنی به شما ارائه دهم.";
-  static const chatHeaderEnglish =
-      "Hi! I am an AI language model that can give you text-based services.";
-
+  int? id;
   List<ChatMessage> messages = [];
+  String title = "";
   int length() => messages.length;
 
-  void add(String message, bool isUser, isRTL) {
-    messages.add(ChatMessage(text: message, isUser: isUser, isRTL: isRTL));
+  Chat({this.id});
+
+  void add(ChatMessage message) {
+    messages.add(message);
   }
 
   ChatMessage last() {
     return messages.last;
   }
 
-  Chat withHeader() {
-    Chat newChat = Chat();
-    newChat.add(chatHeaderPersian, false, true);
-    newChat.messages.addAll(messages);
-    return newChat;
-  }
-}
-
-class ChatGPTCompletion {
-  final List<dynamic> completions;
-  String get firstChoice {
-    return completions[0]["message"]["content"];
+  void removeLast() {
+    if (messages.isNotEmpty) {
+      messages.removeLast();
+    }
   }
 
-  const ChatGPTCompletion({required this.completions});
+  bool isEmpty() {
+    return messages.isEmpty;
+  }
 
   @override
   String toString() {
-    return firstChoice;
+    String result = "";
+    for (var msg in messages) {
+      result += "${msg.isUser ? 'USER: ' : 'GPT: '} ${msg.text}\n";
+    }
+    return result;
   }
 
-  // factory ChatGPTCompletion.fromJson(Map<String, dynamic> d) {
-  //   // print("COMPLETIONS: ${json['completions']}");
-  //   // print("FIRST CHOICE: ${json['completions'][0]["message"]["content"]}");
-  //   return ChatGPTCompletion(
-  //       completions: d.containsKey('completions') ? d['completions'] : []);
-  // }
+  factory Chat.fromJSON(dynamic chatJSON) {
+    Chat chat = Chat(id: chatJSON["id"]);
+    chat.title = chatJSON["title"];
+    final chatMessages = chatJSON["messages"];
+    for (var chatMessage in chatMessages) {
+      if (chatMessage["role"] != "system") {
+        chat.add(ChatMessage(
+            text: chatMessage["content"],
+            isUser: chatMessage["role"] == "user"));
+      }
+    }
+    chat.add(ChatMessage(
+      text: chatJSON["completions"][0]["message"]["content"],
+      isUser: false,
+    ));
+    return chat;
+  }
+
+  /*
+  * prepends messages of chat with a system message to be sent to the openai
+  */
+  List<Map<String, String>> prependedMessages() {
+    List<Map<String, String>> result = [
+      {
+        "role": "system",
+        "content": "Assistant is a helpful language model created by OpenAI"
+      },
+    ];
+
+    for (var i = 0; i < length(); i++) {
+      var chatMessage = messages[i];
+      if (chatMessage.text.isEmpty) {
+        continue;
+      }
+      if (chatMessage.isUser) {
+        result.add({"role": "user", "content": chatMessage.text});
+      } else {
+        result.add({"role": "assistant", "content": chatMessage.text});
+      }
+    }
+    return result;
+  }
 }

@@ -19,18 +19,13 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final tffController = TextEditingController();
   final scrollController = ScrollController();
-  String inputLanguage = "fa";
-  bool get inputIsRTL => inputLanguage == "fa";
-  Chat get chat => widget.noron.currentChat.withHeader();
+  bool isFetchingCompletion = false;
+  bool inputIsRTL = false;
   final _focusNode = FocusNode();
 
-  void addMessageToChat(text, isUser, isRTL) {
-    widget.noron.currentChatMessages
-        .add(ChatMessage(text: text, isUser: isUser, isRTL: isRTL));
-  }
-
-  void removeLastMessage() {
-    widget.noron.currentChatMessages.removeLast();
+  Chat get chat => widget.noron.currentChat;
+  set chat(Chat newValue) {
+    widget.noron.user.chats.last = newValue;
   }
 
   @override
@@ -38,16 +33,14 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     tffController.addListener(() {
       setState(() {
-        var inputText = tffController.text;
-        if (inputText.isEmpty) {
-          inputLanguage = widget.noron.isRTL() ? "fa" : "en";
-        } else {
-          inputLanguage = detectLanguage(string: inputText);
-        }
+        inputIsRTL = detectRTL(string: tffController.text);
       });
     });
     _focusNode.addListener(() {
       setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      scrollTheChat();
     });
   }
 
@@ -61,6 +54,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[200],
       body: Stack(
         children: <Widget>[
           Padding(
@@ -72,7 +66,6 @@ class _ChatPageState extends State<ChatPage> {
                 final message = chat.messages[index];
                 final text = message.text;
                 final isUser = message.isUser;
-                final isFetching = message.isFetching;
 
                 final bubbleType =
                     isUser ? BubbleType.sendBubble : BubbleType.receiverBubble;
@@ -82,9 +75,10 @@ class _ChatPageState extends State<ChatPage> {
                     ? Colors.blue[400]
                     : const Color(0xFFFFFFFF); //const Color(0xffE7E7ED);
 
-                final chatBubbleChild = isFetching
-                    ? const CircularProgressIndicator.adaptive()
-                    : getRichText(text, isUser, detectLanguage(string: text));
+                final chatBubbleChild =
+                    (isFetchingCompletion && index == chat.messages.length - 1)
+                        ? const CircularProgressIndicator.adaptive()
+                        : getRichText(text, isUser);
 
                 return ChatBubble(
                   clipper: ChatBubbleClipper4(type: bubbleType),
@@ -214,14 +208,14 @@ class _ChatPageState extends State<ChatPage> {
             ],
           ),
         ),
-        hintText: widget.noron.isRTL() ? "تایپ کنید" : "type here ...",
+        hintText: "تایپ کنید",
         hintStyle: const TextStyle(
           color: Colors.black54,
         ),
         border: InputBorder.none,
         suffixIcon: FloatingActionButton(
           mini: true,
-          onPressed: widget.noron.latestChatMessage?.isFetching ?? false
+          onPressed: isFetchingCompletion || tffController.text.isEmpty
               ? null
               : () => processUserInput(tffController.text),
           // hoverColor: Colors.green,
@@ -243,34 +237,27 @@ class _ChatPageState extends State<ChatPage> {
 
   void processUserInput(String text) {
     FocusManager.instance.primaryFocus?.unfocus();
+    chat.add(ChatMessage(text: text, isUser: true));
+    chat.add(ChatMessage(text: "", isUser: false));
     setState(() {
-      if (text.isNotEmpty && !chat.last().isFetching) {
-        addMessageToChat(text, true, detectLanguage(string: text) == "fa");
-        addMessageToChat("", false, true);
-        widget.noron.latestChatMessage?.isFetching = true;
-        scrollTheChat();
-        fetchChatResponse(
-                chat: widget.noron.currentChat, user: widget.noron.user)
-            .then((value) {
-          setState(() {
-            widget.noron.latestChatMessage?.text = value.firstChoice;
-            widget.noron.latestChatMessage?.isFetching = false;
-            widget.noron.latestChatMessage?.isRTL =
-                (detectLanguage(string: value.firstChoice) == 'fa');
-            scrollTheChat();
-          });
-        }).onError((error, stackTrace) {
-          setState(() {
-            print("BOOO ERROR!:\n${error.toString()}\n$stackTrace");
-            widget.noron.latestChatMessage?.isFetching = false;
-
-            removeLastMessage();
-            removeLastMessage();
-          });
-        });
-        tffController.clear();
-      }
+      isFetchingCompletion = true;
     });
+    fetchChatResponse(chat: chat, user: widget.noron.user).then((fetchedChat) {
+      setState(() {
+        chat = fetchedChat;
+        isFetchingCompletion = false;
+        scrollTheChat();
+      });
+    }).onError((error, stackTrace) {
+      print(
+          "BBBBB\nError when fetching chat-completion!:\n${error.toString()}\n$stackTrace");
+      setState(() {
+        isFetchingCompletion = false;
+        chat.removeLast();
+        chat.removeLast();
+      });
+    });
+    tffController.clear();
   }
 
   void scrollTheChat() {

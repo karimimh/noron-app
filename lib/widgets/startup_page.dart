@@ -20,7 +20,7 @@ class _StartupPageState extends State<StartupPage> {
   @override
   void initState() {
     super.initState();
-    futureUser = login(widget.noron.user);
+    futureUser = onStartup(widget.noron.user);
   }
 
   @override
@@ -29,7 +29,9 @@ class _StartupPageState extends State<StartupPage> {
         future: futureUser,
         builder: (context, snapshot) {
           if (snapshot.hasData && snapshot.data!.hasToken()) {
+            print("Logged in (fetched all chats) SUCCESSFULLY!");
             widget.noron.user = snapshot.data!;
+            widget.noron.currentChatIndex = snapshot.data!.chats.length - 1;
             Future.microtask(
                 () => Navigator.of(context).pushReplacement(MaterialPageRoute(
                       builder: (context) {
@@ -37,6 +39,7 @@ class _StartupPageState extends State<StartupPage> {
                       },
                     )));
           } else if (snapshot.hasError) {
+            print("Login Error!: ${snapshot.error!.toString()}");
             Future.microtask(
                 () => Navigator.of(context).pushReplacement(MaterialPageRoute(
                       builder: (context) {

@@ -112,6 +112,8 @@ class _ResendEmailPageState extends State<ResendEmailPage> {
                   return Text(
                     errorString,
                     textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                     style: const TextStyle(color: Colors.red),
                   );
                 },

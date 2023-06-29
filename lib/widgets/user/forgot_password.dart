@@ -115,6 +115,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   return Text(
                     errorString,
                     textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                     style: const TextStyle(color: Colors.red),
                   );
                 },

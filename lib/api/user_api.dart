@@ -1,9 +1,9 @@
-import 'package:noron_front/util/text_utils.dart';
-
 import '../objects/chat.dart';
 import '../objects/user.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+
+import 'openai.dart';
 
 Future<User> createUserAndSendMail({
   required String name,
@@ -100,7 +100,7 @@ Future<bool> activateUser({
 }
 
 Future<User> fetchMe(User u) async {
-  print("FETCHME_STARTED with token: ${u.token}");
+  // print("FETCHME_STARTED with token: ${u.token}");
   const String meUrl = 'http://185.226.119.155:8000/user/me/';
   final response = await http.get(
     Uri.parse(meUrl),
@@ -118,7 +118,7 @@ Future<User> fetchMe(User u) async {
         token: u.token);
     return Future.value(newUser);
   } else {
-    print('FETCHME_ERROR: ${response.statusCode} ${response.body}');
+    // print('FETCHME_ERROR: ${response.statusCode} ${response.body}');
     return Future.error(response.body);
   }
 }
@@ -169,62 +169,30 @@ Future<bool> resetPassword({
   }
 }
 
-Future<List<Chat>> fetchAllChats({required User user}) async {
-  String url = 'http://185.226.119.155:8000/openai/chats/all/';
-  final response = await http.get(
-    Uri.parse(url),
-    headers: {
-      'Content-Type': 'application/json; charset=UTF-8',
-      'authorization': 'Token ${user.token}'
-    },
-  );
-
-  if (response.statusCode == 200) {
-    var decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    List results = decoded["results"];
-
-    List<Chat> chats = [];
-    for (var item in results) {
-      Chat chat = Chat();
-      String jsonString = item["messages"].replaceAll("'", '"');
-      var messages = jsonDecode(jsonString);
-      for (var message in messages) {
-        if (message["role"] != "system") {
-          chat.messages.add(ChatMessage(
-              text: message["content"],
-              isUser: message["role"] == "user",
-              isRTL: detectLanguage(string: message["content"]) == "fa"));
-        }
-      }
-
-      chat.messages.add(ChatMessage(
-          text: item["completions"][0]["message"]["content"],
-          isUser: false,
-          isRTL: detectLanguage(
-                  string: item["completions"][0]["message"]["content"]) ==
-              "fa"));
-      chats.add(chat);
-    }
-    // print(chats.length);
-    return Future.value(chats);
-  } else {
-    print(response.statusCode);
-    print(response.body);
-    return Future.error(response.body);
-  }
-}
-
-Future<User> login(User u) async {
+Future<User> refetchUserData(User u) async {
   try {
     User user = await fetchMe(u);
     // now fetchAllChats
     List<Chat> chats = await fetchAllChats(user: user);
-    chats.add(Chat());
+    chats.add(Chat()); // add an empty chat for the next conversation.
     user.chats = chats;
-    print(chats.length);
     return Future.value(user);
   } catch (e) {
-    print(e);
+    // print(e);
+    return Future.error(e);
+  }
+}
+
+Future<User> onStartup(User u) async {
+  try {
+    User user = await fetchMe(u);
+    // now fetchAllChats
+    List<Chat> chats = await fetchAllChats(user: user);
+    chats.add(Chat()); // add an empty chat for the next conversation.
+    user.chats = chats;
+    return Future.value(user);
+  } catch (e) {
+    // print(e);
     return Future.error(e);
   }
 }
