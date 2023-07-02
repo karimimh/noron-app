@@ -19,10 +19,10 @@ class _SetttingsSheetState extends State<SetttingsSheet> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 2,
-      ),
+      // appBar: AppBar(
+      //   backgroundColor: Colors.white,
+      //   elevation: 2,
+      // ),
       body: ListView(
         children: [
           ListTile(

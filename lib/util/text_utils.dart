@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:noron_front/util/my_code_highlighter.dart';
-
 import 'highlighter_theme.dart';
 
 String detectLanguage({required String string}) {
@@ -52,8 +51,7 @@ TextSpan highlightedBackTicks(String text) {
   return TextSpan(children: spans);
 }
 
-SelectableText getRichText(String text, bool isUser) {
-  final textColor = isUser ? Colors.white : Colors.black;
+SelectableText getRichText(String text, Color textColor, TextAlign textAlign) {
   final isRTL = detectRTL(string: text);
 
   RegExp regexp = RegExp(r"```([\s\S]*?)```");
@@ -79,7 +77,7 @@ SelectableText getRichText(String text, bool isUser) {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Builder(builder: (context) {
@@ -124,6 +122,7 @@ SelectableText getRichText(String text, bool isUser) {
         fontSize: 16,
       ),
     ),
+    textAlign: textAlign,
     textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
   );
 }

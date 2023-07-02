@@ -17,9 +17,15 @@ class NoronAppData {
     return user.email.isNotEmpty && user.token.isNotEmpty;
   }
 
+  bool bubbledTheme = false;
+  bool isShowingSidePage = false;
   int currentChatIndex = 0;
 
   Chat get currentChat => user.chats[currentChatIndex];
+  set currentChat(Chat newValue) {
+    user.chats[currentChatIndex] = newValue;
+  }
+
   List<ChatMessage> get currentChatMessages => currentChat.messages;
   ChatMessage? get latestChatMessage =>
       currentChatMessages.isEmpty ? null : currentChatMessages.last;
@@ -55,6 +61,7 @@ class NoronAppData {
   }
 
   void refresh({Function()? onCompletion, Function()? onError}) {
+    print("refreshing");
     refetchUserData(user).then((value) {
       user = value;
       if (onCompletion != null) {

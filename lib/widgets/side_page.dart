@@ -1,46 +1,68 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
 import 'package:noron_front/util/text_utils.dart';
 
 import '../api/openai.dart';
 import '../objects/chat.dart';
+import 'settings_sheet.dart';
 
-class SidebarPage extends StatefulWidget {
+class SidePage extends StatefulWidget {
   final NoronAppData noron;
-  final GlobalKey<ScaffoldState> scaffoldKey;
   final void Function(int chatIndex)? onChatItemTapped;
 
-  const SidebarPage({
+  const SidePage({
     super.key,
     required this.noron,
     this.onChatItemTapped,
-    required this.scaffoldKey,
   });
 
   @override
-  State<SidebarPage> createState() => _SidebarPageState();
+  State<SidePage> createState() => SidePageState();
 }
 
-class _SidebarPageState extends State<SidebarPage> {
+class SidePageState extends State<SidePage> {
   bool _isRefreshing = false;
-
-  List<Chat> get _userChats {
-    List<Chat> c = [];
-    for (var chat in widget.noron.user.chats) {
-      if (chat.messages.isNotEmpty) {
-        c.add(chat);
-      }
-    }
-    return c;
-  }
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  List<Chat> get _userChats =>
+      widget.noron.user.chats.sublist(0, widget.noron.user.chats.length - 1);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 2,
-        title: const Text("تاریخچه"),
+        elevation: 1,
+        title: const Text("گفتگوها"),
+        leading: IconButton(
+            onPressed: () {
+              if (_scaffoldKey.currentContext != null) {
+                showModalBottomSheet(
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20))),
+                  context: _scaffoldKey.currentContext!,
+                  builder: (context) {
+                    return WillPopScope(
+                        onWillPop: () {
+                          setState(() {});
+                          return Future(() => true);
+                        },
+                        child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(25)),
+                            child: SetttingsSheet(noron: widget.noron)));
+                  },
+                );
+              }
+            },
+            icon: const Icon(
+              Icons.settings,
+              color: Colors.black,
+            )),
         actions: [
           IconButton(
               onPressed: _isRefreshing
@@ -55,32 +77,6 @@ class _SidebarPageState extends State<SidebarPage> {
         ],
       ),
       backgroundColor: Colors.white,
-      // floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      // floatingActionButton: FloatingActionButton(
-      //     backgroundColor: Colors.white,
-      //     child: const Icon(
-      //       Icons.settings,
-      //       color: Colors.black,
-      //     ),
-      //     onPressed: () {
-      //       if (_scaffoldKey.currentContext != null) {
-      //         showModalBottomSheet(
-      //           shape: const RoundedRectangleBorder(
-      //               borderRadius: BorderRadius.only(
-      //                   topLeft: Radius.circular(20),
-      //                   topRight: Radius.circular(20))),
-      //           context: _scaffoldKey.currentContext!,
-      //           builder: (context) {
-      //             return WillPopScope(
-      //                 onWillPop: () {
-      //                   setState(() {});
-      //                   return Future(() => true);
-      //                 },
-      //                 child: SetttingsSheet(noron: widget.noron));
-      //           },
-      //         );
-      //       }
-      //     }),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
         shrinkWrap: true,
@@ -88,8 +84,9 @@ class _SidebarPageState extends State<SidebarPage> {
         itemBuilder: (context, i) {
           int index = _userChats.length - 1 - i;
           Chat chat = _userChats[index];
-          var chatTitle =
-              chat.title.isEmpty ? chat.messages.first.text : chat.title;
+          var chatTitle = (chat.title.isEmpty && chat.messages.isNotEmpty)
+              ? chat.messages.first.text
+              : chat.title;
           bool isRTL = detectLanguage(string: chatTitle) == "fa";
           return Builder(builder: (context) {
             return GestureDetector(
@@ -104,25 +101,7 @@ class _SidebarPageState extends State<SidebarPage> {
                   showPopupMenu(context, chat.id ?? -1);
                 }
               },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  color: Colors.grey[100],
-                  // boxShadow: const [
-                  //   BoxShadow(blurRadius: 1, color: Colors.black)
-                  // ],
-                ),
-                padding: const EdgeInsets.all(8),
-                alignment: Alignment.center,
-                child: Text(
-                  chatTitle,
-                  textAlign: isRTL ? TextAlign.right : TextAlign.left,
-                  textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-                  overflow: TextOverflow.fade,
-                ),
-              ),
+              child: listTile(index, chatTitle, isRTL),
             );
           });
         },
@@ -130,11 +109,46 @@ class _SidebarPageState extends State<SidebarPage> {
     );
   }
 
+  Widget listTile(int index, String chatTitle, bool isRTL) {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          height: 60,
+          alignment: Alignment.center,
+          child: ListTile(
+            leading: const Icon(
+              Icons.chat_bubble_outline,
+              color: Colors.black,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            title: Text(
+              chatTitle,
+              textAlign: isRTL ? TextAlign.right : TextAlign.left,
+              textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+        ),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: Colors.grey[200],
+          indent: 65,
+        )
+      ],
+    );
+  }
+
   void refreshChats(BuildContext context) {
+    if (_isRefreshing) {
+      return;
+    }
     setState(() {
       _isRefreshing = true;
     });
-    return widget.noron.refresh(
+    widget.noron.refresh(
       onCompletion: () {
         setState(() {
           _isRefreshing = false;
@@ -291,7 +305,9 @@ class _TitleInputDialogState extends State<TitleInputDialog> {
     super.initState();
     _textController = TextEditingController();
     _textController.addListener(() {
-      _rtl = detectRTL(string: _textController.text);
+      setState(() {
+        _rtl = detectRTL(string: _textController.text);
+      });
     });
   }
 
@@ -311,6 +327,7 @@ class _TitleInputDialogState extends State<TitleInputDialog> {
         controller: _textController,
         decoration: const InputDecoration(hintText: 'عنوان'),
       ),
+      actionsAlignment: MainAxisAlignment.spaceEvenly,
       actions: [
         TextButton(
           onPressed: () {

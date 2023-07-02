@@ -1,6 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:noron_front/objects/noron.dart';
-import 'package:noron_front/widgets/sidebar_page.dart';
+import 'package:noron_front/widgets/side_page.dart';
 
 import '../objects/chat.dart';
 import 'chat_page.dart';
@@ -15,8 +16,20 @@ class HomePage extends StatefulWidget {
 
 class HomePageState extends State<HomePage> {
   final _scController = ScrollController();
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool isShowingSideBar = false;
+  final sidepageKey = GlobalKey<SidePageState>();
+
+  var chatpageKey = GlobalKey<ChatPageState>();
+  bool get isShowingSideBar => widget.noron.isShowingSidePage;
+  set isShowingSideBar(bool newValue) {
+    widget.noron.isShowingSidePage = newValue;
+  }
+
+  double get anchoredScrollPosition => isShowingSideBar
+      ? _scController.position.minScrollExtent
+      : _scController.position.maxScrollExtent;
+  double get draggedScrollPosition => anchoredScrollPosition + dragDelta;
+  double dragDelta = 0;
+  bool isDragging = false;
 
   @override
   void initState() {
@@ -30,11 +43,47 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
+      onHorizontalDragStart: (details) {
+        setState(() {
+          isDragging = true;
+          dragDelta = 0;
+        });
+      },
+      onHorizontalDragUpdate: (details) {
+        setState(() {
+          if ((draggedScrollPosition + details.delta.dx <=
+                  _scController.position.maxScrollExtent) &&
+              (draggedScrollPosition + details.delta.dx >=
+                  _scController.position.minScrollExtent)) {
+            dragDelta += details.delta.dx;
+          }
+          _rejumpSideBar();
+        });
+      },
       onHorizontalDragEnd: (details) {
-        double delta = details.velocity.pixelsPerSecond.dx;
-        if (isShowingSideBar && delta < -10) {
-          _toggleSideBar();
-        }
+        // double totalScrollDistance = _scController.position.maxScrollExtent -
+        //     _scController.position.minScrollExtent;
+        setState(() {
+          bool wasNotShowingSideBar = !isShowingSideBar;
+          if (-dragDelta >= screenWidth * 0.2) {
+            isShowingSideBar = true;
+          } else if (dragDelta >= screenWidth * 0.2) {
+            isShowingSideBar = false;
+          }
+          isDragging = false;
+          dragDelta = 0;
+          _rejumpSideBar(
+            animated: true,
+            completion: wasNotShowingSideBar && isShowingSideBar
+                ? () {
+                    // if (sidepageKey.currentContext != null) {
+                    //   sidepageKey.currentState
+                    //       ?.refreshChats(sidepageKey.currentContext!);
+                    // }
+                  }
+                : null,
+          );
+        });
       },
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -43,46 +92,63 @@ class HomePageState extends State<HomePage> {
         child: Row(
           children: [
             SizedBox(
-                width: screenWidth * 0.666,
-                child: SidebarPage(
+                width: screenWidth * 0.8,
+                child: SidePage(
+                  key: sidepageKey,
                   noron: widget.noron,
                   onChatItemTapped: (chatIndex) {
                     _toggleSideBar(
                       completion: () {
                         widget.noron.currentChatIndex = chatIndex;
+                        if (chatpageKey.currentState != null) {
+                          Future.delayed(const Duration(seconds: 1),
+                              chatpageKey.currentState!.scrollTheChat);
+                        }
                       },
                     );
                   },
-                  scaffoldKey: _scaffoldKey,
                 )),
             SizedBox(
               width: screenWidth,
               child: Scaffold(
-                key: _scaffoldKey,
                 body: Scaffold(
                   appBar: AppBar(
                     backgroundColor: Colors.white,
-                    elevation: 2,
+                    elevation: 1,
                     leading: IconButton(
                         onPressed: () {
-                          _toggleSideBar();
+                          _toggleSideBar(
+                            completion: () {
+                              // if (sidepageKey.currentContext != null) {
+                              //   sidepageKey.currentState
+                              //       ?.refreshChats(sidepageKey.currentContext!);
+                              // }
+                            },
+                          );
                         },
                         icon: const Icon(Icons.menu)),
                     actions: [
-                      IconButton(
-                          onPressed: () {
-                            if (widget.noron.currentChat.isEmpty()) {
-                              return;
-                            }
-                            if (!widget.noron.user.chats.last.isEmpty()) {
-                              widget.noron.user.chats.add(Chat());
-                            }
-                            setState(() {
-                              widget.noron.currentChatIndex =
-                                  widget.noron.user.chats.length - 1;
-                            });
-                          },
-                          icon: const Icon(Icons.cleaning_services)),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                                backgroundColor: Colors.black12,
+                                foregroundColor: Colors.black),
+                            onPressed: () {
+                              if (widget.noron.currentChat.isEmpty()) {
+                                return;
+                              }
+                              if (!widget.noron.user.chats.last.isEmpty()) {
+                                widget.noron.user.chats.add(Chat());
+                              }
+                              setState(() {
+                                widget.noron.currentChatIndex =
+                                    widget.noron.user.chats.length - 1;
+                              });
+                            },
+                            icon: const Icon(CupertinoIcons.add_circled),
+                            label: const Text("بحث جدید")),
+                      ),
                     ],
                   ),
                   body: Stack(
@@ -92,6 +158,7 @@ class HomePageState extends State<HomePage> {
                         child: IgnorePointer(
                             ignoring: isShowingSideBar,
                             child: ChatPage(
+                              key: chatpageKey,
                               noron: widget.noron,
                             )),
                       ),
@@ -136,11 +203,41 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  // void _repositionSideBar() {
-  //   if (_scController.hasClients) {
-  //     _scController.jumpTo(_isShowingSideBar
-  //         ? _scController.position.maxScrollExtent
-  //         : _scController.position.minScrollExtent);
-  //   }
-  // }
+  void _rejumpSideBar({bool animated = false, void Function()? completion}) {
+    if (_scController.hasClients) {
+      if (isDragging) {
+        if (animated) {
+          _scController
+              .animateTo(
+            draggedScrollPosition,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeInOut,
+          )
+              .then((value) {
+            if (completion != null) {
+              completion();
+            }
+          });
+        } else {
+          _scController.jumpTo(draggedScrollPosition);
+        }
+      } else {
+        if (animated) {
+          _scController
+              .animateTo(
+            draggedScrollPosition,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+          )
+              .then((value) {
+            if (completion != null) {
+              completion();
+            }
+          });
+        } else {
+          _scController.jumpTo(anchoredScrollPosition);
+        }
+      }
+    }
+  }
 }
